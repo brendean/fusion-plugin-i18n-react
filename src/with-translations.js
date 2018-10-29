@@ -15,6 +15,18 @@ type TranslateType = (
   interpolations?: {[string]: string | number}
 ) => string;
 
+type InjectedPropsType = {|
+  translate: TranslateType,
+|};
+
+const createTranslate = (context: Context) => {
+  const {i18n} = context;
+  return i18n
+    ? (key: string, interpolations?: {[string]: string | number}) =>
+        i18n.translate(key, interpolations)
+    : (key: string) => key;
+};
+
 /*
 The `withTranslations` HOC takes an array of translation keys as an argument,
 but does not use it at runtime.
@@ -27,20 +39,11 @@ The translation map is then exposed by `fusion-plugin-i18n/chunk-translation-map
 export const withTranslations = (
   translationKeys: string[] /*translationKeys*/
 ) => {
-  return <T: {}>(
-    Component: React$ComponentType<T>
-  ): Class<React$Component<$Diff<T, {|translate?: TranslateType|}>>> => {
-    class WithTranslations extends React.Component<T> {
-      translate: TranslateType;
-
-      constructor(props: T, context: Context) {
-        super(props, context);
-        const {i18n} = context;
-        this.translate = i18n
-          ? (key: string, interpolations?: {[string]: string | number}) =>
-              i18n.translate(key, interpolations)
-          : (key: string) => key;
-      }
+  return <PassedProps: *>(
+    Component: React$ComponentType<PassedProps>
+  ): Class<React$Component<$Diff<PassedProps, InjectedPropsType>>> => {
+    class WithTranslations extends React.Component<PassedProps> {
+      translate: TranslateType = createTranslate(this.context);
 
       render() {
         return <Component {...this.props} translate={this.translate} />;
